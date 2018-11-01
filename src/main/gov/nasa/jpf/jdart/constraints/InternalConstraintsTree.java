@@ -469,7 +469,9 @@ public class InternalConstraintsTree {
         logger.finer("Finding new valuation");
         Result res = solverCtx.solve(val);
         logger.finer("Found: " + res + " : " + val);
+        logger.finer("About to pass value");
         try {
+          logger.finer("About to pass value 2");
           coordinator.passValue((Integer) val.getValue("s"));
           logger.finer("Passing value");
         } catch (SyncFailedException e) {
