@@ -23,10 +23,13 @@ import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.util.ExpressionUtil;
 import gov.nasa.jpf.jdart.config.AnalysisConfig;
 import gov.nasa.jpf.jdart.config.ConcolicValues;
+import gov.nasa.jpf.jdart.coordinator.CoordinatorAdapter;
+import gov.nasa.jpf.jdart.coordinator.CoordinatorAdapterImpl;
 import gov.nasa.jpf.util.JPFLogger;
 import gov.nasa.jpf.util.Pair;
 import gov.nasa.jpf.vm.Instruction;
 
+import java.io.SyncFailedException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -286,7 +289,8 @@ public class InternalConstraintsTree {
   }
   
   private final JPFLogger logger = JPF.getLogger("jdart");
-  
+
+  private final CoordinatorAdapter<Integer> coordinator = new CoordinatorAdapterImpl<>();
   
   private final Node root = new Node(null);
   private Node current = root; // This is the current node in our EXPLORATION
@@ -465,7 +469,15 @@ public class InternalConstraintsTree {
         logger.finer("Finding new valuation");
         Result res = solverCtx.solve(val);
         logger.finer("Found: " + res + " : " + val);
-        // FIXME: prevent generation of valuation that has been used before.        
+        try {
+          coordinator.passValue((Integer) val.getValue("s"));
+          logger.finer("Passing value");
+        } catch (SyncFailedException e) {
+          e.printStackTrace();
+        }
+
+        // TODO:  share the found value with the fuzzer
+        // FIXME: prevent generation of valuation that has been used before.
         switch(res) {
         case UNSAT:
           currentTarget.unsatisfiable();
