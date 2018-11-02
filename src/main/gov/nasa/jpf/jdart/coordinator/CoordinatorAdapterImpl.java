@@ -9,7 +9,7 @@ public class CoordinatorAdapterImpl<T extends Serializable> implements Coordinat
 
     // TODO: Get host from the config file
     private static final CoordinatorSeedBag<Serializable> seedbag =
-            new CoordinatorSeedBag<>("192.168.1.147", 8080);
+            new CoordinatorSeedBag<>("coordinatorservice.default.svc.cluster.local", 8080);
 
     @Override
     public void passValue(T value) throws SyncFailedException {
