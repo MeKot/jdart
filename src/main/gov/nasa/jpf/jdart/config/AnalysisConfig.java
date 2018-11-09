@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Predicate;
@@ -110,6 +111,8 @@ public class AnalysisConfig {
 
   private boolean loadAxioms = false;
   
+  private int[] decisionTrace = null;
+  
   public void parse(String prefix, Config config) {
     String maxDepthKey = prefix + ".max_depth";
     if(config.hasValue(maxDepthKey)) {
@@ -170,6 +173,21 @@ public class AnalysisConfig {
       setSymbolicFieldsInclude(symbInclStr);
     }
     
+    String decisionTraceKey = prefix + ".decision_trace";
+    if(config.hasValue(decisionTraceKey)) {
+      String decisionTraceStr = config.getString(decisionTraceKey);
+      parseTrace(decisionTraceStr);
+    }
+  }
+  
+  private void parseTrace(String decisionTraceStr) {
+    decisionTrace = decisionTraceStr.chars()
+        .map(c -> Character.getNumericValue(c))
+        .toArray();
+  }
+  
+  public Optional<int[]> getDecisionTrace() {
+    return Optional.ofNullable(decisionTrace);
   }
   
   public int getTreeMaxDepth() {

@@ -31,6 +31,7 @@ import gov.nasa.jpf.vm.Instruction;
 
 import java.io.SyncFailedException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -465,6 +466,38 @@ public class InternalConstraintsTree {
           currentTarget.dontKnow();
           continue;
         }
+        // (guided JDart execution) check if the current trace is a prefix of the target decision trace  
+        if (anaConf.getDecisionTrace().isPresent()) {
+          int[] decisionTrace = anaConf.getDecisionTrace().get();
+          int[] currentTrace = tracePathToNode(currentTarget);
+
+          if (logger.isFineLogged()) {
+            logger.fine("target  trace: ", Arrays.toString(decisionTrace));
+            logger.fine("current trace: ", Arrays.toString(currentTrace));
+          }
+          //FIXME what should we do if the target trace is a prefix of the current trace?  
+          int size = Math.min(decisionTrace.length, currentTrace.length);
+          boolean isPrefix = true;
+          for (int i = 0; i < size; i++) {
+            if (decisionTrace[i] != currentTrace[i]) {
+              isPrefix = false;
+              break;
+            }
+          }
+          if (!isPrefix) {
+            logger.fine("skipping node: ", currentTarget);
+            currentTarget.dontKnow();
+            continue;
+          }
+          if (currentTrace.length >= decisionTrace.length) {
+            //TODO we found our target, do whatever you want here
+            logger.fine("Target path found! continuing...");
+            System.out.println();
+          } else {
+            logger.fine("prefix found! continuing...");
+          }
+        }
+        
         Valuation val = new Valuation();
         logger.finer("Finding new valuation");
         Result res = solverCtx.solve(val);
@@ -538,6 +571,32 @@ public class InternalConstraintsTree {
     }
 
     return null;
+  }
+
+  private int[] tracePathToNode(Node target) {
+    int depth = target.depth;
+    int[] trace = new int[depth];
+    Node current = target;
+    
+    for (int i = depth - 1; i >= 0; i--) {
+      Node parent = current.getParent();
+      DecisionData decisions = parent.decisionData();
+      int choice = 0;
+      for (Node child : decisions.children) {
+        //not sure why child can be null here - maybe the array is populated lazily?
+        if (child != null && child.equals(current)) {
+          break;
+        }
+        choice++;
+      }
+      if (choice > decisions.children.length) {
+        throw new RuntimeException("Is this really the parent for this node? " + parent);
+      }
+      trace[i] = choice;
+      current = parent;
+    }
+    
+    return trace;
   }
 
   public ConstraintsTree toFinalCTree() {
