@@ -291,7 +291,7 @@ public class InternalConstraintsTree {
   
   private final JPFLogger logger = JPF.getLogger("jdart");
 
-  private final CoordinatorAdapter<Integer> coordinator = new CoordinatorAdapterImpl<>();
+//  private final CoordinatorAdapter<Integer> coordinator = new CoordinatorAdapterImpl<>();
   
   private final Node root = new Node(null);
   private Node current = root; // This is the current node in our EXPLORATION
@@ -503,13 +503,13 @@ public class InternalConstraintsTree {
         Result res = solverCtx.solve(val);
         logger.finer("Found: " + res + " : " + val);
         logger.finer("About to pass value");
-        try {
-          logger.finer("About to pass value 2");
-          coordinator.passValue((Integer) val.getValue("s"));
-          logger.finer("Passing value");
-        } catch (SyncFailedException e) {
-          e.printStackTrace();
-        }
+//        try {
+//          logger.finer("About to pass value 2");
+//          coordinator.passValue((Integer) val.getValue("s"));
+//          logger.finer("Passing value");
+//        } catch (SyncFailedException e) {
+//          e.printStackTrace();
+//        }
 
         // TODO:  share the found value with the fuzzer
         // FIXME: prevent generation of valuation that has been used before.

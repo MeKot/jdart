@@ -8,8 +8,8 @@ import java.io.SyncFailedException;
 public class CoordinatorAdapterImpl<T extends Serializable> implements CoordinatorAdapter<T> {
 
     // TODO: Get host from the config file
-    private static final CoordinatorSeedBag<Serializable> seedbag =
-            new CoordinatorSeedBag<>("coordinatorservice.default.svc.cluster.local", 8080);
+    private static final CoordinatorSeedBag<Serializable> seedbag = null;
+//            new CoordinatorSeedBag<>("coordinatorservice.default.svc.cluster.local", 8080);
 
     @Override
     public void passValue(T value) throws SyncFailedException {
