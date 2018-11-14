@@ -2,5 +2,6 @@
 
 concolic.method=foo
 
+jdart.configs.all_fields_symbolic.decision_trace=01
 
 

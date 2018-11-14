@@ -4,3 +4,5 @@ bin/*
 *.orig
 *.DS_Store
 /bin/
+libz3.dylib
+libz3java.dylib

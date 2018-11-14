@@ -24,6 +24,7 @@ import gov.nasa.jpf.constraints.util.ExpressionUtil;
 import gov.nasa.jpf.jdart.config.ConcolicConfig;
 import gov.nasa.jpf.jdart.config.ConcolicMethodConfig;
 import gov.nasa.jpf.jdart.constraints.Path;
+import gov.nasa.jpf.jdart.constraints.Snapshot;
 import gov.nasa.jpf.jdart.testsuites.TestSuiteGenerator;
 import gov.nasa.jpf.util.JPFLogger;
 import gov.nasa.jpf.util.LogHandler;
@@ -35,9 +36,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -136,195 +135,205 @@ public class JDart implements JPFShell {
    *
    * @return the {@link ConcolicExplorer} containing the analysis data.
    */
+
+
   public ConcolicExplorer run() {
 
-    logger.finest("JDart.run() -- begin");
-    
-    // prepare config
-    Config jpfConf = cc.generateJPFConfig(config);
 
-    // Configure JPF
-    jpfConf.remove("shell");
-    jpfConf.setProperty("jvm.insn_factory.class", ConcolicInstructionFactory.class.getName());
-    jpfConf.prepend("peer_packages", "gov.nasa.jpf.jdart.peers", ";");
-    
-    String listener = ConcolicListener.class.getName();
-    if(jpfConf.hasValue("listener"))
-      listener += ";" + jpfConf.getString("listener");
-    jpfConf.setProperty("listener", listener);
-    jpfConf.setProperty("perturb.class", ConcolicPerturbator.class.getName());
-    jpfConf.setProperty("search.multiple_errors", "true");
+      Thread updateThread = new Thread(new Snapshot());
+      updateThread.start();
 
-    //
-    jpfConf.setProperty(CONFIG_KEY_CONCOLIC_EXPLORER, ConcolicExplorer.class.getName() + "@jdart-explorer");
-    ConcolicExplorer ce = getConcolicExplorer(jpfConf);
-    this.explorer = ce;
-    ce.configure(cc);
+      while (true) {
+          logger.finest("JDart.run() -- begin");
 
-    // set up logger. Maybe this should not be done here
-    //TODO: this is ugly. Clean it up
-    if(!jpfConf.getProperty("jdart.log.output", "").equals("")) {
-      try {
-        FileHandler fh = new FileHandler(jpfConf.getProperty("jdart.log.output"));
-        logger.addHandler(fh);
-        fh.setFormatter(new Formatter() {
-          @Override
-          public String format(LogRecord record) {
-            StringBuilder sb = new StringBuilder();
-            sb.append('[');       
-            sb.append(record.getLevel().getName());
-            sb.append("] ");
-            String msg = record.getMessage();
-            Object[] params = record.getParameters();
-            if (params == null){
-              sb.append(msg);
-            } else {
-              sb.append(String.format(msg,params));
-            }
-            sb.append('\n');
-            return sb.toString();
-          }
-        });
-      } catch (SecurityException e1) {
-        e1.printStackTrace();
-      } catch (IOException e1) {
-        e1.printStackTrace();
-      }
-    }
-    
-    logger.finest("============ JPF Config     ============");
-    StringWriter sw = new StringWriter();
-    PrintWriter pw = new PrintWriter(sw);
-    jpfConf.list(pw);
-    pw.close();
-    logger.finest(sw.toString());
-    logger.finest("============ End JPF Config ============");
+      // prepare config
+      Config jpfConf = cc.generateJPFConfig(config);
 
-    // run jpf ...
-    JPF jpf = new JPF(jpfConf);
-    SimpleProfiler.start("JDART-run");
-    SimpleProfiler.start("JPF-boot"); // is stopped upon searchStarted in ConcolicListener
-    jpf.run();
-    SimpleProfiler.stop("JDART-run");
+      // Configure JPF
+      jpfConf.remove("shell");
+      jpfConf.setProperty("jvm.insn_factory.class", ConcolicInstructionFactory.class.getName());
+      jpfConf.prepend("peer_packages", "gov.nasa.jpf.jdart.peers", ";");
 
-    // post process ...    
-    logger.finest("JDart.run() -- end");
-    logger.info("Profiling:\n" + SimpleProfiler.getResults());
+      String listener = ConcolicListener.class.getName();
+      if (jpfConf.hasValue("listener"))
+          listener += ";" + jpfConf.getString("listener");
+      jpfConf.setProperty("listener", listener);
+      jpfConf.setProperty("perturb.class", ConcolicPerturbator.class.getName());
+      jpfConf.setProperty("search.multiple_errors", "true");
 
-    FileOutputStream outStream = null;
-    PrintStream printStream = null;
+      //
+      jpfConf.setProperty(CONFIG_KEY_CONCOLIC_EXPLORER, ConcolicExplorer.class.getName() + "@jdart-explorer");
+      ConcolicExplorer ce = getConcolicExplorer(jpfConf);
+      this.explorer = ce;
+      ce.configure(cc);
 
-    String concolicValuesFileName = config.getProperty("concolic.values_file");
-    if (concolicValuesFileName != null) {
-      try {
-        outStream = new FileOutputStream(concolicValuesFileName);
-        printStream = new PrintStream(outStream);
-      } catch (Exception ex) {
-        logger.severe(ex);
-      }
-    }
-
-    if (ce.hasCurrentAnalysis()) {
-      ce.completeAnalysis();
-    }
-
-    logger.info("Completed Analyses: " + ce.getCompletedAnalyses().size());
-    System.err.println("Completed Analyses: " + ce.getCompletedAnalyses().size());
-
-    for (Map.Entry<String, List<CompletedAnalysis>> e : ce.getCompletedAnalyses().entrySet()) {
-      String id = e.getKey();
-      ConcolicMethodConfig mc = cc.getMethodConfig(id);
-      logger.info();
-      logger.info("Analyses for method ", mc);
-      logger.info("==================================");
-      for (CompletedAnalysis ca : e.getValue()) {
-
-        if (ca.getConstraintsTree() == null) {
-          logger.info("tree is null");
-          continue;
-        }
-
-        if (config.getBoolean("jdart.tests.gen")) {
+      // set up logger. Maybe this should not be done here
+      //TODO: this is ugly. Clean it up
+      if (!jpfConf.getProperty("jdart.log.output", "").equals("")) {
           try {
-            TestSuiteGenerator gen = TestSuiteGenerator.fromAnalysis(ca, config);
-            gen.generate();
-          } catch (IOException ex) {
-            logger.log(Level.SEVERE, null, ex);
+              FileHandler fh = new FileHandler(jpfConf.getProperty("jdart.log.output"));
+              logger.addHandler(fh);
+              fh.setFormatter(new Formatter() {
+                  @Override
+                  public String format(LogRecord record) {
+                      StringBuilder sb = new StringBuilder();
+                      sb.append('[');
+                      sb.append(record.getLevel().getName());
+                      sb.append("] ");
+                      String msg = record.getMessage();
+                      Object[] params = record.getParameters();
+                      if (params == null) {
+                          sb.append(msg);
+                      } else {
+                          sb.append(String.format(msg, params));
+                      }
+                      sb.append('\n');
+                      return sb.toString();
+                  }
+              });
+          } catch (SecurityException e1) {
+              e1.printStackTrace();
+          } catch (IOException e1) {
+              e1.printStackTrace();
           }
-        }
-        
-        // FIXME: refactor this. 
-        
-        //logger.info("Initial valuation: ", ca.getInitialValuation());
-        if (!config.getBoolean("jdart.tree.dont.print")) {
-          logger.info(ca.getConstraintsTree().toString(false, true));
-        }   
-        if (config.getBoolean("jdart.tree.json.print")) {
-          ca.getConstraintsTree().toJson(config.getProperty("jdart.tree.json.dir") + 
-            "/" + jpfConf.getProperty("jpf.app") + ".json");
-        }
+      }
 
-        logger.info("----Constraints Tree Statistics---");
-        logger.info("# paths (total): " + ca.getConstraintsTree().getAllPaths().size());
-        logger.info("# OK paths: " + ca.getConstraintsTree().getCoveredPaths().size());
-        logger.info("# ERROR paths: " + ca.getConstraintsTree().getErrorPaths().size());
-        logger.info("# DONT_KNOW paths: " + ca.getConstraintsTree().getDontKnowPaths().size());
-        logger.info("");
-        
-        logger.info("-------Valuation Statistics-------");
-        logger.info("# of valuations (OK+ERR): " + (ca.getConstraintsTree().getCoveredPaths().size() + ca.getConstraintsTree().getErrorPaths().size()));
-        logger.info("");
-        for (Path p : ca.getConstraintsTree().getAllPaths()) {
-          if (p.getValuation() == null) {
-            // dont know cases
-            continue;
-          }
-          String file_output = "";
-          String out = "";
-          for (Variable v : p.getValuation().getVariables()) {
-            out += v.getResultType().getName() + ":" + v.getName() + "=" + p.getValuation().getValue(v) + ", ";
-            String vResultType = v.getResultType().getName();
-            String type = null;
+      logger.finest("============ JPF Config     ============");
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      jpfConf.list(pw);
+      pw.close();
+      logger.finest(sw.toString());
+      logger.finest("============ End JPF Config ============");
 
-            if (vResultType.equals("java.lang.Integer")) {
-              type = "int";
-            } else if (vResultType.equals("java.lang.Long")) {
-              type = "long";
-            } else if (vResultType.equals("java.lang.Float")) {
-              type = "float";
-            } else if (vResultType.equals("java.lang.Double")) {
-              type = "double";
-            } else if (vResultType.equals("java.lang.Boolean")) {
-              type = "boolean";
-            }
+      // run jpf ...
+      JPF jpf = new JPF(jpfConf);
+      SimpleProfiler.start("JDART-run");
+      SimpleProfiler.start("JPF-boot"); // is stopped upon searchStarted in ConcolicListener
+      jpf.run();
+      SimpleProfiler.stop("JDART-run");
 
-            if (type != null) {
-              file_output += type + ":" + p.getValuation().getValue(v) + "\n";
-            }
-          }
-          logger.info(out);
+      // post process ...
+      logger.finest("JDart.run() -- end");
+      logger.info("Profiling:\n" + SimpleProfiler.getResults());
 
-          if (printStream != null) {
-            try {
-              printStream.print(file_output);
-            } catch (Exception ex) {
+      FileOutputStream outStream = null;
+      PrintStream printStream = null;
+
+      String concolicValuesFileName = config.getProperty("concolic.values_file");
+      if (concolicValuesFileName != null) {
+          try {
+              outStream = new FileOutputStream(concolicValuesFileName);
+              printStream = new PrintStream(outStream);
+          } catch (Exception ex) {
               logger.severe(ex);
-            }
           }
-        }
-        logger.info("--------------------------------");
       }
-    }
 
-    if (printStream != null) {
-      try {
-        printStream.close();
-      } catch (Exception ex) {
-        logger.severe(ex);
+      if (ce.hasCurrentAnalysis()) {
+          ce.completeAnalysis();
       }
-    }
 
-    return ce;
+      logger.info("Completed Analyses: " + ce.getCompletedAnalyses().size());
+      System.err.println("Completed Analyses: " + ce.getCompletedAnalyses().size());
+
+      for (Map.Entry<String, List<CompletedAnalysis>> e : ce.getCompletedAnalyses().entrySet()) {
+          String id = e.getKey();
+          ConcolicMethodConfig mc = cc.getMethodConfig(id);
+          logger.info();
+          logger.info("Analyses for method ", mc);
+          logger.info("==================================");
+          for (CompletedAnalysis ca : e.getValue()) {
+
+              if (ca.getConstraintsTree() == null) {
+                  logger.info("tree is null");
+                  continue;
+              }
+
+              if (config.getBoolean("jdart.tests.gen")) {
+                  try {
+                      TestSuiteGenerator gen = TestSuiteGenerator.fromAnalysis(ca, config);
+                      gen.generate();
+                  } catch (IOException ex) {
+                      logger.log(Level.SEVERE, null, ex);
+                  }
+              }
+
+              // FIXME: refactor this.
+
+              //logger.info("Initial valuation: ", ca.getInitialValuation());
+              if (!config.getBoolean("jdart.tree.dont.print")) {
+                  logger.info(ca.getConstraintsTree().toString(false, true));
+              }
+              if (config.getBoolean("jdart.tree.json.print")) {
+                  ca.getConstraintsTree().toJson(config.getProperty("jdart.tree.json.dir") +
+                          "/" + jpfConf.getProperty("jpf.app") + ".json");
+              }
+
+              logger.info("----Constraints Tree Statistics---");
+              logger.info("# paths (total): " + ca.getConstraintsTree().getAllPaths().size());
+              logger.info("# OK paths: " + ca.getConstraintsTree().getCoveredPaths().size());
+              logger.info("# ERROR paths: " + ca.getConstraintsTree().getErrorPaths().size());
+              logger.info("# DONT_KNOW paths: " + ca.getConstraintsTree().getDontKnowPaths().size());
+              logger.info("");
+
+              logger.info("-------Valuation Statistics-------");
+              logger.info("# of valuations (OK+ERR): " + (ca.getConstraintsTree().getCoveredPaths().size() + ca.getConstraintsTree().getErrorPaths().size()));
+              logger.info("");
+              for (Path p : ca.getConstraintsTree().getAllPaths()) {
+                  if (p.getValuation() == null) {
+                      // dont know cases
+                      continue;
+                  }
+                  String file_output = "";
+                  String out = "";
+                  for (Variable v : p.getValuation().getVariables()) {
+                      out += v.getResultType().getName() + ":" + v.getName() + "=" + p.getValuation().getValue(v) + ", ";
+                      String vResultType = v.getResultType().getName();
+                      String type = null;
+
+                      if (vResultType.equals("java.lang.Integer")) {
+                          type = "int";
+                      } else if (vResultType.equals("java.lang.Long")) {
+                          type = "long";
+                      } else if (vResultType.equals("java.lang.Float")) {
+                          type = "float";
+                      } else if (vResultType.equals("java.lang.Double")) {
+                          type = "double";
+                      } else if (vResultType.equals("java.lang.Boolean")) {
+                          type = "boolean";
+                      }
+
+                      if (type != null) {
+                          file_output += type + ":" + p.getValuation().getValue(v) + "\n";
+                      }
+                  }
+                  logger.info(out);
+
+                  if (printStream != null) {
+                      try {
+                          printStream.print(file_output);
+                      } catch (Exception ex) {
+                          logger.severe(ex);
+                      }
+                  }
+              }
+              logger.info("--------------------------------");
+          }
+      }
+
+      if (printStream != null) {
+          try {
+              printStream.close();
+          } catch (Exception ex) {
+              logger.severe(ex);
+          }
+      }
+      if (ce == null) {
+          return ce;
+      }
+  }
+
   }
 
   public static ConcolicExplorer getConcolicExplorer(Config config) {

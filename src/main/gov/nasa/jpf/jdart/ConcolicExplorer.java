@@ -141,7 +141,9 @@ public final class ConcolicExplorer {
   
   
   /**
-   * start a new path in the symbolic execution. This method is called
+   * start a new path in the sym    // load function tables
+    // TODO: maybe expose precision as parameter?
+   * Symbolic execution. This method is called
    * immediately before the execution of the symbolic method starts. 
    * It pre-initialized all parameters and globals (the ones that have been
    * instantiated already). Only in the first run of the method it does not do 
