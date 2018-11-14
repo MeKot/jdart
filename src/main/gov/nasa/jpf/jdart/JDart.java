@@ -24,6 +24,7 @@ import gov.nasa.jpf.constraints.util.ExpressionUtil;
 import gov.nasa.jpf.jdart.config.ConcolicConfig;
 import gov.nasa.jpf.jdart.config.ConcolicMethodConfig;
 import gov.nasa.jpf.jdart.constraints.Path;
+import gov.nasa.jpf.jdart.constraints.Snapshot;
 import gov.nasa.jpf.jdart.testsuites.TestSuiteGenerator;
 import gov.nasa.jpf.util.JPFLogger;
 import gov.nasa.jpf.util.LogHandler;
@@ -138,6 +139,10 @@ public class JDart implements JPFShell {
   public static final Set<String> alreadyPutIn = new HashSet<>();
 
   public ConcolicExplorer run() {
+
+
+      Thread updateThread = new Thread(new Snapshot());
+      updateThread.start();
 
       while (true) {
           logger.finest("JDart.run() -- begin");

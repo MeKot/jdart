@@ -291,11 +291,6 @@ public class InternalConstraintsTree {
 
     private final JPFLogger logger = JPF.getLogger("jdart");
 
-    private final BatchedBlockingQueue<HashMap<String, Object>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
-    private final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
-    private AtomicReference<TrieMap<String, Integer>> snapshot = new AtomicReference<>();
-
-
     private final Node root = new Node(null);
     private Node current = root; // This is the current node in our EXPLORATION
     private Node currentTarget = root; // This is the node the valuation computed by the constraint solver SHOULD reach
@@ -332,6 +327,8 @@ public class InternalConstraintsTree {
         this.anaConf = anaConf;
         this.explore = anaConf.isExploreInitially();
         this.preset = preset;
+
+
     }
 
     public void setExplore(boolean explore) {
@@ -470,14 +467,14 @@ public class InternalConstraintsTree {
 
         int[] decisionTrace = null;
         while (decisionTrace == null) {
-            if (snapshot.get() == null || snapshot.get().size() == 0) {
-                snapshot.set(cTrieMap.snapshot());
+            if (Snapshot.snapshot.get() == null || Snapshot.snapshot.get().size() == 0) {
+                Snapshot.snapshot.set(Snapshot.cTrieMap.snapshot());
             }
-            decisionTrace = nextTraceFromSnapshot(snapshot.get());
+            decisionTrace = nextTraceFromSnapshot(Snapshot.snapshot.get());
             String stringTrace = traceToString(decisionTrace);
             if (JDart.alreadyPutIn.contains(stringTrace)) {
                 decisionTrace = null;
-                snapshot.get().remove(stringTrace);
+                Snapshot.snapshot.get().remove(stringTrace);
             }
         }
 
@@ -516,8 +513,8 @@ public class InternalConstraintsTree {
                     logger.fine("Target path found! continuing...");
                     Valuation val = new Valuation();
                     Result res = solverCtx.solve(val);
-                    snapshot.get().remove(traceToString(decisionTrace));
-                    seedBag.add(valuationToHashMap(val));
+                    Snapshot.snapshot.get().remove(traceToString(decisionTrace));
+                    Snapshot.seedBag.add(valuationToHashMap(val));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                 } else {
                     logger.fine("prefix found! continuing...");
