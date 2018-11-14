@@ -468,7 +468,11 @@ public class InternalConstraintsTree {
         int[] decisionTrace = null;
         while (decisionTrace == null) {
             if (Snapshot.snapshot.get() == null || Snapshot.snapshot.get().size() == 0) {
-                Snapshot.snapshot.set(Snapshot.cTrieMap.snapshot());
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
             decisionTrace = nextTraceFromSnapshot(Snapshot.snapshot.get());
             String stringTrace = traceToString(decisionTrace);
