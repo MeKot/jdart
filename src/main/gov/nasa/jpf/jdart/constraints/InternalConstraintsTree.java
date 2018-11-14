@@ -24,6 +24,7 @@ import gov.nasa.jpf.constraints.api.Expression;
 import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.util.ExpressionUtil;
+import gov.nasa.jpf.jdart.JDart;
 import gov.nasa.jpf.jdart.config.AnalysisConfig;
 import gov.nasa.jpf.jdart.config.ConcolicValues;
 import gov.nasa.jpf.util.JPFLogger;
@@ -476,43 +477,45 @@ public class InternalConstraintsTree {
                     continue;
                 }
                 // (guided JDart execution) check if the current trace is a prefix of the target decision trace
-                if (anaConf.getDecisionTrace().isPresent()) {
-                    int[] decisionTrace = null;
-                    while (decisionTrace == null) {
-                        snapshot.set(cTrieMap.snapshot());
-                        decisionTrace = nextTraceFromSnapshot(snapshot.get());
+                int[] decisionTrace = null;
+                while (decisionTrace == null) {
+                    snapshot.set(cTrieMap.snapshot());
+                    decisionTrace = nextTraceFromSnapshot(snapshot.get());
+                    String stringTrace = traceToString(decisionTrace);
+                    if (JDart.alreadyPutIn.contains(stringTrace)) {
+                        decisionTrace = null;
+                        snapshot.get().remove(stringTrace);
                     }
-                    int[] currentTrace = tracePathToNode(currentTarget);
+                }
+                int[] currentTrace = tracePathToNode(currentTarget);
 
-                    if (logger.isFineLogged()) {
-                        logger.fine("target  trace: ", Arrays.toString(decisionTrace));
-                        logger.fine("current trace: ", Arrays.toString(currentTrace));
+                if (logger.isFineLogged()) {
+                    logger.fine("target  trace: ", Arrays.toString(decisionTrace));
+                    logger.fine("current trace: ", Arrays.toString(currentTrace));
+                }
+                //FIXME what should we do if the target trace is a prefix of the current trace?
+                int size = Math.min(decisionTrace.length, currentTrace.length);
+                boolean isPrefix = true;
+                for (int i = 0; i < size; i++) {
+                    if (decisionTrace[i] != currentTrace[i]) {
+                        isPrefix = false;
+                        break;
                     }
-                    //FIXME what should we do if the target trace is a prefix of the current trace?
-                    int size = Math.min(decisionTrace.length, currentTrace.length);
-                    boolean isPrefix = true;
-                    for (int i = 0; i < size; i++) {
-                        if (decisionTrace[i] != currentTrace[i]) {
-                            isPrefix = false;
-                            break;
-                        }
-                    }
-                    if (!isPrefix) {
-                        logger.fine("skipping node: ", currentTarget);
-                        currentTarget.dontKnow();
-                        continue;
-                    }
-                    if (currentTrace.length >= decisionTrace.length) {
-                        //TODO we found our target, do whatever you want here
-                        logger.fine("Target path found! continuing...");
-                        Valuation val = new Valuation();
-                        Result res = solverCtx.solve(val);
-                        seedBag.add(valuationToHashMap(val));
-                        snapshot.get().remove(traceToString(decisionTrace));
-                        logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
-                    } else {
-                        logger.fine("prefix found! continuing...");
-                    }
+                }
+                if (!isPrefix) {
+                    logger.fine("skipping node: ", currentTarget);
+                    currentTarget.dontKnow();
+                    continue;
+                }
+                if (currentTrace.length >= decisionTrace.length) {
+                    //TODO we found our target, do whatever you want here
+                    logger.fine("Target path found! continuing...");
+                    Valuation val = new Valuation();
+                    Result res = solverCtx.solve(val);
+                    snapshot.get().remove(traceToString(decisionTrace));
+                    logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
+                } else {
+                    logger.fine("prefix found! continuing...");
                 }
 
                 Valuation val = new Valuation();
@@ -543,6 +546,7 @@ public class InternalConstraintsTree {
                             break;
                         }
                         prev = val;
+                        JDart.alreadyPutIn.add(traceToString(decisionTrace));
                         return ExpressionUtil.combineValuations(val);
                 }
             } else {
@@ -713,7 +717,7 @@ public class InternalConstraintsTree {
 
         int[] ret = new int[smallest.get().getKey().length()];
 
-        for (int x = 0; x < smallest.get().getKey().length(); x ++) {
+        for (int x = 0; x < smallest.get().getKey().length(); x++) {
             ret[x] = smallest.get().getKey().charAt(x) - '0';
         }
 
@@ -721,6 +725,10 @@ public class InternalConstraintsTree {
     }
 
     private static String traceToString(int[] decisionTrace) {
+        if (decisionTrace == null) {
+            return null;
+        }
+
         StringBuilder builder = new StringBuilder();
 
         for (int x : decisionTrace) {
