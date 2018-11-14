@@ -23,18 +23,14 @@ import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.util.ExpressionUtil;
 import gov.nasa.jpf.jdart.config.AnalysisConfig;
 import gov.nasa.jpf.jdart.config.ConcolicValues;
-import gov.nasa.jpf.jdart.coordinator.CoordinatorAdapter;
-import gov.nasa.jpf.jdart.coordinator.CoordinatorAdapterImpl;
 import gov.nasa.jpf.util.JPFLogger;
 import gov.nasa.jpf.util.Pair;
 import gov.nasa.jpf.vm.Instruction;
+import seedbag.BatchedBlockingQueue;
+import seedbag.CoordinatorSeedBag;
 
 import java.io.SyncFailedException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 
 public class InternalConstraintsTree {
 
@@ -291,8 +287,8 @@ public class InternalConstraintsTree {
   
   private final JPFLogger logger = JPF.getLogger("jdart");
 
-//  private final CoordinatorAdapter<Integer> coordinator = new CoordinatorAdapterImpl<>();
-  
+  private final BatchedBlockingQueue<HashMap<String, Integer>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
+
   private final Node root = new Node(null);
   private Node current = root; // This is the current node in our EXPLORATION
   private Node currentTarget = root; // This is the node the valuation computed by the constraint solver SHOULD reach
@@ -307,7 +303,17 @@ public class InternalConstraintsTree {
   private final ConcolicValues preset;
   private boolean replay = false;
   
-  private Valuation prev = null;  
+  private Valuation prev = null;
+
+
+  private HashMap<String, Integer> valuationToHashMap(Valuation valuation) {
+      HashMap<String, Integer> hashMap = new HashMap<>();
+
+      valuation.iterator().forEachRemaining(x -> {
+          hashMap.put(x.getVariable().getName(), (Integer) x.getValue());
+      });
+      return hashMap;
+  }
  
   
   public InternalConstraintsTree(SolverContext solverCtx, AnalysisConfig anaConf) {
@@ -503,6 +509,7 @@ public class InternalConstraintsTree {
         Result res = solverCtx.solve(val);
         logger.finer("Found: " + res + " : " + val);
         logger.finer("About to pass value");
+
 //        try {
 //          logger.finer("About to pass value 2");
 //          coordinator.passValue((Integer) val.getValue("s"));
@@ -510,6 +517,11 @@ public class InternalConstraintsTree {
 //        } catch (SyncFailedException e) {
 //          e.printStackTrace();
 //        }
+          seedBag.add(valuationToHashMap(val));
+          logger.finer("Variables:");
+
+          HashMap<String, Integer> map = seedBag.peek();
+          map.forEach((y, z) -> logger.finest(y + " : " + z));
 
         // TODO:  share the found value with the fuzzer
         // FIXME: prevent generation of valuation that has been used before.
