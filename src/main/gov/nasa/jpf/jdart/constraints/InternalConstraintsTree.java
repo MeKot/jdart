@@ -467,6 +467,20 @@ public class InternalConstraintsTree {
             diverged = false;
         }
         current = root;
+
+        int[] decisionTrace = null;
+        while (decisionTrace == null) {
+            if (snapshot.get() == null || snapshot.get().size() == 0) {
+                snapshot.set(cTrieMap.snapshot());
+            }
+            decisionTrace = nextTraceFromSnapshot(snapshot.get());
+            String stringTrace = traceToString(decisionTrace);
+            if (JDart.alreadyPutIn.contains(stringTrace)) {
+                decisionTrace = null;
+                snapshot.get().remove(stringTrace);
+            }
+        }
+
         while ((currentTarget = backtrack(currentTarget, true)) != null) {
             DecisionData dec = currentTarget.decisionData();
             if (dec == null) {
@@ -477,16 +491,7 @@ public class InternalConstraintsTree {
                     continue;
                 }
                 // (guided JDart execution) check if the current trace is a prefix of the target decision trace
-                int[] decisionTrace = null;
-                while (decisionTrace == null) {
-                    snapshot.set(cTrieMap.snapshot());
-                    decisionTrace = nextTraceFromSnapshot(snapshot.get());
-                    String stringTrace = traceToString(decisionTrace);
-                    if (JDart.alreadyPutIn.contains(stringTrace)) {
-                        decisionTrace = null;
-                        snapshot.get().remove(stringTrace);
-                    }
-                }
+
                 int[] currentTrace = tracePathToNode(currentTarget);
 
                 if (logger.isFineLogged()) {
