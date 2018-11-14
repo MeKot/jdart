@@ -494,32 +494,18 @@ public class InternalConstraintsTree {
                     if (currentTrace.length >= decisionTrace.length) {
                         //TODO we found our target, do whatever you want here
                         logger.fine("Target path found! continuing...");
-                        System.out.println();
+                        Valuation val = new Valuation();
+                        Result res = solverCtx.solve(val);
+                        seedBag.add(valuationToHashMap(val));
+                        logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                     } else {
                         logger.fine("prefix found! continuing...");
                     }
                 }
 
                 Valuation val = new Valuation();
-                logger.finer("Finding new valuation");
                 Result res = solverCtx.solve(val);
-                logger.finer("Found: " + res + " : " + val);
-                logger.finer("About to pass value");
 
-//        try {
-//          logger.finer("About to pass value 2");
-//          coordinator.passValue((Integer) val.getValue("s"));
-//          logger.finer("Passing value");
-//        } catch (SyncFailedException e) {
-//          e.printStackTrace();
-//        }
-                seedBag.add(valuationToHashMap(val));
-                logger.finer("Variables:");
-
-                HashMap<String, Integer> map = seedBag.peek();
-                map.forEach((y, z) -> logger.finest(y + " : " + z));
-
-                // TODO:  share the found value with the fuzzer
                 // FIXME: prevent generation of valuation that has been used before.
                 switch (res) {
                     case UNSAT:
