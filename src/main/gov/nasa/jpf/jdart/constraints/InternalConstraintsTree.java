@@ -476,7 +476,7 @@ public class InternalConstraintsTree {
             }
             decisionTrace = nextTraceFromSnapshot(Snapshot.snapshot.get());
             String stringTrace = traceToString(decisionTrace);
-            if (JDart.alreadyPutIn.contains(stringTrace)) {
+            if (Snapshot.alreadyPutIn.contains(stringTrace)) {
                 decisionTrace = null;
                 Snapshot.snapshot.get().remove(stringTrace);
             }
@@ -552,7 +552,7 @@ public class InternalConstraintsTree {
                             break;
                         }
                         prev = val;
-                        JDart.alreadyPutIn.add(traceToString(decisionTrace));
+                        Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
                         return ExpressionUtil.combineValuations(val);
                 }
             } else {

@@ -7,12 +7,15 @@ import seedbag.BatchedBlockingQueue;
 import seedbag.CoordinatorSeedBag;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Snapshot implements Runnable {
     static final BatchedBlockingQueue<HashMap<String, Object>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
     static final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
     static AtomicReference<TrieMap<String, Integer>> snapshot = new AtomicReference<>(cTrieMap.snapshot());
+    public static final Set<String> alreadyPutIn = new HashSet<>();
 
 
     @Override

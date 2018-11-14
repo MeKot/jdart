@@ -136,7 +136,6 @@ public class JDart implements JPFShell {
    * @return the {@link ConcolicExplorer} containing the analysis data.
    */
 
-  public static final Set<String> alreadyPutIn = new HashSet<>();
 
   public ConcolicExplorer run() {
 
