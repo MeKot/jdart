@@ -15,6 +15,9 @@
  */
 package gov.nasa.jpf.jdart.constraints;
 
+import com.romix.scala.collection.concurrent.TrieMap;
+import ctrie.CTrieMap;
+import ctrie.CoordinatorCTrie;
 import gov.nasa.jpf.JPF;
 import gov.nasa.jpf.constraints.api.ConstraintSolver.Result;
 import gov.nasa.jpf.constraints.api.Expression;
@@ -31,6 +34,7 @@ import seedbag.CoordinatorSeedBag;
 
 import java.io.SyncFailedException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class InternalConstraintsTree {
 
@@ -287,6 +291,9 @@ public class InternalConstraintsTree {
     private final JPFLogger logger = JPF.getLogger("jdart");
 
     private final BatchedBlockingQueue<HashMap<String, Integer>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
+    private final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
+    private final TrieMap<String, Integer> snapshot = cTrieMap.snapshot();
+
 
     private final Node root = new Node(null);
     private Node current = root; // This is the current node in our EXPLORATION
@@ -470,7 +477,16 @@ public class InternalConstraintsTree {
                 }
                 // (guided JDart execution) check if the current trace is a prefix of the target decision trace
                 if (anaConf.getDecisionTrace().isPresent()) {
-                    int[] decisionTrace = anaConf.getDecisionTrace().get();
+                    System.out.println(snapshot.size());
+                    int[] decisionTrace = null;
+                    while (decisionTrace == null) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        decisionTrace = nextTraceFromSnapshot(snapshot);
+                    }
                     int[] currentTrace = tracePathToNode(currentTarget);
 
                     if (logger.isFineLogged()) {
@@ -497,6 +513,7 @@ public class InternalConstraintsTree {
                         Valuation val = new Valuation();
                         Result res = solverCtx.solve(val);
                         seedBag.add(valuationToHashMap(val));
+                        snapshot.remove(traceToString(decisionTrace));
                         logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                     } else {
                         logger.fine("prefix found! continuing...");
@@ -685,6 +702,38 @@ public class InternalConstraintsTree {
         }
         return done;
     }
+
+    private static int[] nextTraceFromSnapshot(TrieMap<String, Integer> snapshot) {
+        AtomicReference<Map.Entry<String, Integer>> smallest = new AtomicReference<>(snapshot.iterator().next());
+
+        if (smallest.get() == null) {
+            return null;
+        }
+
+        snapshot.iterator().forEachRemaining(x -> {
+            if (x.getValue() < smallest.get().getValue()) {
+                smallest.set(x);
+            }
+        });
+
+        int[] ret = new int[smallest.get().getKey().length()];
+
+        for (int x = 0; x < smallest.get().getKey().length(); x ++) {
+            ret[x] = smallest.get().getKey().charAt(x) - '0';
+        }
+
+        return ret;
+    }
+
+    private static String traceToString(int[] decisionTrace) {
+        StringBuilder builder = new StringBuilder();
+
+        for (int x : decisionTrace) {
+            builder.append(Character.forDigit(x, 10));
+        }
+        return builder.toString();
+    }
+
 
     private TrimmedConstraintsTree.Node generateTrimmedNode(DecisionData d, TrimmedConstraintsTree.Node[] arr) {
         List<TrimmedConstraintsTree.Node> tchildren = new ArrayList<>();
