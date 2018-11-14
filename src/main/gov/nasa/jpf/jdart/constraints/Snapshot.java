@@ -17,8 +17,8 @@ public class Snapshot implements Runnable {
 
     @Override
     public void run() {
-        Snapshot.snapshot.set(Snapshot.cTrieMap.snapshot());
         while (true) {
+            Snapshot.snapshot.set(Snapshot.cTrieMap.snapshot());
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {
