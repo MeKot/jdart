@@ -291,7 +291,7 @@ public class InternalConstraintsTree {
 
     private final JPFLogger logger = JPF.getLogger("jdart");
 
-    private final BatchedBlockingQueue<HashMap<String, Integer>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
+    private final BatchedBlockingQueue<HashMap<String, Object>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
     private final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
     private AtomicReference<TrieMap<String, Integer>> snapshot = new AtomicReference<>();
 
@@ -313,11 +313,11 @@ public class InternalConstraintsTree {
     private Valuation prev = null;
 
 
-    private HashMap<String, Integer> valuationToHashMap(Valuation valuation) {
-        HashMap<String, Integer> hashMap = new HashMap<>();
+    private HashMap<String, Object> valuationToHashMap(Valuation valuation) {
+        HashMap<String, Object> hashMap = new HashMap<>();
 
         valuation.iterator().forEachRemaining(x -> {
-            hashMap.put(x.getVariable().getName(), (Integer) x.getValue());
+            hashMap.put(x.getVariable().getName(), (Object) x.getValue());
         });
         return hashMap;
     }
@@ -508,11 +508,11 @@ public class InternalConstraintsTree {
                     continue;
                 }
                 if (currentTrace.length >= decisionTrace.length) {
-                    //TODO we found our target, do whatever you want here
                     logger.fine("Target path found! continuing...");
                     Valuation val = new Valuation();
                     Result res = solverCtx.solve(val);
                     snapshot.get().remove(traceToString(decisionTrace));
+                    seedBag.add(valuationToHashMap(val));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                 } else {
                     logger.fine("prefix found! continuing...");
