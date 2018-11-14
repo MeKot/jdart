@@ -292,7 +292,7 @@ public class InternalConstraintsTree {
 
     private final BatchedBlockingQueue<HashMap<String, Integer>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
     private final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
-    private final TrieMap<String, Integer> snapshot = cTrieMap.snapshot();
+    private AtomicReference<TrieMap<String, Integer>> snapshot = new AtomicReference<>();
 
 
     private final Node root = new Node(null);
@@ -477,15 +477,10 @@ public class InternalConstraintsTree {
                 }
                 // (guided JDart execution) check if the current trace is a prefix of the target decision trace
                 if (anaConf.getDecisionTrace().isPresent()) {
-                    System.out.println(snapshot.size());
                     int[] decisionTrace = null;
                     while (decisionTrace == null) {
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        decisionTrace = nextTraceFromSnapshot(snapshot);
+                        snapshot.set(cTrieMap.snapshot());
+                        decisionTrace = nextTraceFromSnapshot(snapshot.get());
                     }
                     int[] currentTrace = tracePathToNode(currentTarget);
 
@@ -513,7 +508,7 @@ public class InternalConstraintsTree {
                         Valuation val = new Valuation();
                         Result res = solverCtx.solve(val);
                         seedBag.add(valuationToHashMap(val));
-                        snapshot.remove(traceToString(decisionTrace));
+                        snapshot.get().remove(traceToString(decisionTrace));
                         logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                     } else {
                         logger.fine("prefix found! continuing...");
