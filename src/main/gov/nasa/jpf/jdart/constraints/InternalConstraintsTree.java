@@ -521,6 +521,7 @@ public class InternalConstraintsTree {
                     Snapshot.seedBag.add(valuationToHashMap(val));
                     Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
+                    return ExpressionUtil.combineValuations(val);
                 } else {
                     logger.fine("prefix found! continuing...");
                 }
@@ -554,6 +555,7 @@ public class InternalConstraintsTree {
                         }
                         prev = val;
                         Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
+
                         return ExpressionUtil.combineValuations(val);
                 }
             } else {
@@ -585,7 +587,7 @@ public class InternalConstraintsTree {
             return preset.next();
         }
 
-        logger.finer("Could not find a valuation for trace " + Arrays.toString(decisionTrace));
+        System.out.println("Could not find a valuation for trace " + Arrays.toString(decisionTrace));
         Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
         return null;
     }

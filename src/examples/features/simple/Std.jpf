@@ -10,7 +10,7 @@ symbolic.dp=z3
 target=features.simple.Input
 
 # Set up the concolic method with symbolic/concrete parameters. See the wiki for more details
-concolic.method.toString=features.simple.Input.toString(d:int)
+concolic.method.toString=features.simple.Input.toString(s:int)
 
 # Specify the concolic method configuration object to use
 concolic.method=toString

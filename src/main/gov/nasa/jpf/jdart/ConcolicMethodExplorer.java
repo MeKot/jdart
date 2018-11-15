@@ -204,7 +204,7 @@ public class ConcolicMethodExplorer {
     // If there is no next valuation, try to find one
     if(nextValuation == null)
       nextValuation = constraintsTree.findNext();
-    return (nextValuation != null);
+    return false;
   }
   
   public boolean advanceValuation() {
