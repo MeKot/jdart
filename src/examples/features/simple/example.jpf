@@ -2,10 +2,9 @@
 
 target=features.simple.Input
 
-concolic.method.foo=features.simple.Input.foo(i:int)
-concolic.method.foo.config=all_fields_symbolic
+concolic.method.foo=features.simple.Input.foo(i:int,i64:int)
 
-concolic.method.bar=features.simple.Input.bar(d:double)
+concolic.method.bar=features.simple.Input.bar(d:int)
 
 concolic.method.zoo=features.simple.Input.zoo(i:int,j:short,f:float)
 concolic.method.zoo.config=zoo

@@ -3,4 +3,4 @@
 
 target=features.shift.Input
 
-concolic.method.shift=features.shift.Input.shiftTest(l:long,i:int)
+concolic.method.shift=features.shift.Input.shiftTest(l:int,i:int)

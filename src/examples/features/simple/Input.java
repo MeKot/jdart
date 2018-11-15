@@ -54,11 +54,10 @@ public class Input {
     this.i64 = 64;
   }
   
-  public int foo(int i) {
+  public static int foo(int i) {
     System.err.println("\n-------- In foo! Parameter = " + i);
 
-    assert i64 > 0;
-    if (i > i64) {
+    if (i > 0) {
       System.err.printf("%s\n", "i > 64");
       if ( 5 * i <= 325) {
         System.err.printf("%s\n", "5 * i <= 325");
@@ -80,25 +79,14 @@ public class Input {
     }
     System.err.printf("%s\n", "i <= 64");
 
-    this.i64 = i;
 
     return i;
   }
   
-  public double bar(double d) {
-    System.err.println("\n-------- In bar! Parameter = " + d);
-
-    if (d >= 3.141) {
-      System.err.printf("%s\n", "d >= 3.141");
-    }
-   
-    double as = Math.asin(d);
-    System.err.println("asin returned " + as);
-    if(Double.isNaN(as))
-      ;//throw new ArithmeticException("NaN");
-    return as;
+  public static double bar(int d) {
+      return 0;
   }
-  
+
   private static short zoo_sub(short j, float f) {
     if (f + j > 256) {
       System.err.printf("%s\n", "i > 73 && f + j > 256");
@@ -155,17 +143,5 @@ public class Input {
 
 
   public static void main(String[] args) {
-    System.out.println("-------- In main!");
-    Input inst = new Input(64);
-	HashMap<String,Integer> hm = new HashMap<String,Integer>();
-    hm.put("a", 1);
-    hm.put("b", 2);
-    inst.xyz(hm);
-	try {
-    	inst.foo(-1024);
-	} catch(AssertionError ex) {}
-	inst.bar(1.732);
-    inst.zoo(1, (short)2, (float)1.414);
-	inst.baz(new Data(37, 42));
   }
 }

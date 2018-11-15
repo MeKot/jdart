@@ -519,6 +519,7 @@ public class InternalConstraintsTree {
                     Result res = solverCtx.solve(val);
                     Snapshot.snapshot.get().remove(traceToString(decisionTrace));
                     Snapshot.seedBag.add(valuationToHashMap(val));
+                    Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                 } else {
                     logger.fine("prefix found! continuing...");
@@ -584,6 +585,7 @@ public class InternalConstraintsTree {
             return preset.next();
         }
 
+        Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
         return null;
     }
 
