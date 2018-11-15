@@ -141,7 +141,31 @@ public class Input {
      if(m.get("a") > m.get("b"));
    }
 
+	 public static String toString(int s) {
+        if(s == 3) {
+            return "3";
+        }
+        if(s == 4) {
+            return "4";
+        }
+        if(s == 9) {
+            return "9";
+        }
+        if(s == 121) {
+            return "121";
+        }
+        if(s == 62) {
+            return "62";
+        }
+        if(s == 17) {
+            return "17";
+        }
+
+        return Integer.toString(s);
+    }
+
 
   public static void main(String[] args) {
+      toString(100);
   }
 }
