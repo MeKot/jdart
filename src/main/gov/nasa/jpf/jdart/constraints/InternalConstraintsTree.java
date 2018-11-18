@@ -289,7 +289,6 @@ public class InternalConstraintsTree {
 
     static final BatchedBlockingQueue<HashMap<String, Object>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
     static final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
-    static final Set<String> alreadyPutIn = new HashSet<>();
     static final Set<String> nextPaths = new HashSet<>();
 
     private static int N = 5;
@@ -477,23 +476,15 @@ public class InternalConstraintsTree {
         }
         current = root;
 
-        int[] decisionTrace = null;
-        do {
-            nextPaths.remove(traceToString(decisionTrace));
-            if (nextPaths.isEmpty()) {
-                nextPaths.addAll(cTrieMap.getNextNPaths(N));
-                if (nextPaths.isEmpty()) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+        while (nextPaths.isEmpty()) {
+            nextPaths.addAll(cTrieMap.getNextNPaths(N));
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-            if (nextPaths.iterator().hasNext()) {
-                decisionTrace = traceToBitVector(nextPaths.iterator().next());
-            }
-        } while (decisionTrace == null || alreadyPutIn.contains(traceToString(decisionTrace)));
+        }
+        int[] decisionTrace = traceToBitVector(nextPaths.iterator().next());
 
         System.out.println(Arrays.toString(decisionTrace));
 
@@ -534,7 +525,6 @@ public class InternalConstraintsTree {
                     Result res = solverCtx.solve(val);
                     nextPaths.remove(traceToString(decisionTrace));
                     seedBag.add(valuationToHashMap(val));
-                    alreadyPutIn.add(traceToString(decisionTrace));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                     return ExpressionUtil.combineValuations(val);
                 } else {
@@ -568,9 +558,10 @@ public class InternalConstraintsTree {
                             currentTarget.dontKnow();
                             break;
                         }
-                        prev = val;
-                        this.alreadyPutIn.add(traceToString(decisionTrace));
+                        seedBag.add(valuationToHashMap(val));
+                        nextPaths.remove(traceToString(decisionTrace));
 
+                        prev = val;
                         return ExpressionUtil.combineValuations(val);
                 }
             } else {
@@ -603,7 +594,7 @@ public class InternalConstraintsTree {
         }
 
         System.out.println("Could not find a valuation for trace " + Arrays.toString(decisionTrace));
-        this.alreadyPutIn.add(traceToString(decisionTrace));
+        nextPaths.remove(traceToString(decisionTrace));
         return null;
     }
 
