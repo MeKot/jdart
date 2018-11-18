@@ -287,7 +287,7 @@ public class InternalConstraintsTree {
 
     private final JPFLogger logger = JPF.getLogger("jdart");
 
-    static final BatchedBlockingQueue<HashMap<String, Object>> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
+    static final BatchedBlockingQueue<Object[]> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
     static final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
     static final Set<String> nextPaths = new HashSet<>();
 
@@ -310,13 +310,10 @@ public class InternalConstraintsTree {
     private Valuation prev = null;
 
 
-    private HashMap<String, Object> valuationToHashMap(Valuation valuation) {
-        HashMap<String, Object> hashMap = new HashMap<>();
-
-        valuation.iterator().forEachRemaining(x -> {
-            hashMap.put(x.getVariable().getName(), (Object) x.getValue());
-        });
-        return hashMap;
+    private Object[] valuationToObjectArray(Valuation valuation) {
+        List<Object> values = new ArrayList<>();
+        valuation.iterator().forEachRemaining(x -> values.add(x.getValue()));
+        return values.toArray();
     }
 
 
@@ -524,7 +521,7 @@ public class InternalConstraintsTree {
                     Valuation val = new Valuation();
                     Result res = solverCtx.solve(val);
                     nextPaths.remove(traceToString(decisionTrace));
-                    seedBag.add(valuationToHashMap(val));
+                    seedBag.add(valuationToObjectArray(val));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
                     return ExpressionUtil.combineValuations(val);
                 } else {
@@ -558,7 +555,7 @@ public class InternalConstraintsTree {
                             currentTarget.dontKnow();
                             break;
                         }
-                        seedBag.add(valuationToHashMap(val));
+                        seedBag.add(valuationToObjectArray(val));
                         nextPaths.remove(traceToString(decisionTrace));
 
                         prev = val;
