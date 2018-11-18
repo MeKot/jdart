@@ -142,8 +142,8 @@ public class Input {
    }
 
 	 public static String toString(int s) {
-        if(s == 3) {
-            return "3";
+        if(s == 153) {
+            return "153";
         }
         if(s == 4) {
             return "4";
