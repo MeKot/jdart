@@ -15,7 +15,6 @@
  */
 package gov.nasa.jpf.jdart.constraints;
 
-import com.romix.scala.collection.concurrent.TrieMap;
 import ctrie.CTrieMap;
 import ctrie.CoordinatorCTrie;
 import gov.nasa.jpf.JPF;
@@ -24,7 +23,6 @@ import gov.nasa.jpf.constraints.api.Expression;
 import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.util.ExpressionUtil;
-import gov.nasa.jpf.jdart.JDart;
 import gov.nasa.jpf.jdart.config.AnalysisConfig;
 import gov.nasa.jpf.jdart.config.ConcolicValues;
 import gov.nasa.jpf.util.JPFLogger;
@@ -33,9 +31,7 @@ import gov.nasa.jpf.vm.Instruction;
 import seedbag.BatchedBlockingQueue;
 import seedbag.CoordinatorSeedBag;
 
-import java.io.SyncFailedException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class InternalConstraintsTree {
 
@@ -291,6 +287,12 @@ public class InternalConstraintsTree {
 
     private final JPFLogger logger = JPF.getLogger("jdart");
 
+    static final BatchedBlockingQueue<Object[]> seedBag = new CoordinatorSeedBag<>("localhost", 8080);
+    static final CTrieMap<String, Integer> cTrieMap = new CoordinatorCTrie<>("localhost", 8080);
+    static final Set<String> nextPaths = new HashSet<>();
+
+    private static int N = 5;
+
     private final Node root = new Node(null);
     private Node current = root; // This is the current node in our EXPLORATION
     private Node currentTarget = root; // This is the node the valuation computed by the constraint solver SHOULD reach
@@ -308,13 +310,10 @@ public class InternalConstraintsTree {
     private Valuation prev = null;
 
 
-    private HashMap<String, Object> valuationToHashMap(Valuation valuation) {
-        HashMap<String, Object> hashMap = new HashMap<>();
-
-        valuation.iterator().forEachRemaining(x -> {
-            hashMap.put(x.getVariable().getName(), (Object) x.getValue());
-        });
-        return hashMap;
+    private Object[] valuationToObjectArray(Valuation valuation) {
+        List<Object> values = new ArrayList<>();
+        valuation.iterator().forEachRemaining(x -> values.add(x.getValue()));
+        return values.toArray();
     }
 
 
@@ -433,6 +432,15 @@ public class InternalConstraintsTree {
         currentTarget.dontKnow();
     }
 
+    int[] traceToBitVector(String trace) {
+        int[] ret = new int[trace.length()];
+
+        for (int x = 0; x < trace.length(); x++) {
+            ret[x] = trace.charAt(x) - '0';
+        }
+        return ret;
+    }
+
 
     private Node backtrack(Node node, boolean pop) {
         if (node == null)
@@ -465,22 +473,17 @@ public class InternalConstraintsTree {
         }
         current = root;
 
-        int[] decisionTrace = null;
-        while (decisionTrace == null) {
-            if (Snapshot.snapshot.get() == null || Snapshot.snapshot.get().size() == 0) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            decisionTrace = nextTraceFromSnapshot(Snapshot.snapshot.get());
-            String stringTrace = traceToString(decisionTrace);
-            if (Snapshot.alreadyPutIn.contains(stringTrace)) {
-                decisionTrace = null;
-                Snapshot.snapshot.get().remove(stringTrace);
+        while (nextPaths.isEmpty()) {
+            nextPaths.addAll(cTrieMap.getNextNPaths(N));
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
+        int[] decisionTrace = traceToBitVector(nextPaths.iterator().next());
+
+        System.out.println(Arrays.toString(decisionTrace));
 
         while ((currentTarget = backtrack(currentTarget, true)) != null) {
             DecisionData dec = currentTarget.decisionData();
@@ -517,9 +520,10 @@ public class InternalConstraintsTree {
                     logger.fine("Target path found! continuing...");
                     Valuation val = new Valuation();
                     Result res = solverCtx.solve(val);
-                    Snapshot.snapshot.get().remove(traceToString(decisionTrace));
-                    Snapshot.seedBag.add(valuationToHashMap(val));
+                    nextPaths.remove(traceToString(decisionTrace));
+                    seedBag.add(valuationToObjectArray(val));
                     logger.finer("Found valuation for seed: " + Arrays.toString(decisionTrace));
+                    return ExpressionUtil.combineValuations(val);
                 } else {
                     logger.fine("prefix found! continuing...");
                 }
@@ -551,8 +555,10 @@ public class InternalConstraintsTree {
                             currentTarget.dontKnow();
                             break;
                         }
+                        seedBag.add(valuationToObjectArray(val));
+                        nextPaths.remove(traceToString(decisionTrace));
+
                         prev = val;
-                        Snapshot.alreadyPutIn.add(traceToString(decisionTrace));
                         return ExpressionUtil.combineValuations(val);
                 }
             } else {
@@ -584,6 +590,8 @@ public class InternalConstraintsTree {
             return preset.next();
         }
 
+        System.out.println("Could not find a valuation for trace " + Arrays.toString(decisionTrace));
+        nextPaths.remove(traceToString(decisionTrace));
         return null;
     }
 
@@ -706,28 +714,6 @@ public class InternalConstraintsTree {
             }
         }
         return done;
-    }
-
-    private static int[] nextTraceFromSnapshot(TrieMap<String, Integer> snapshot) {
-        AtomicReference<Map.Entry<String, Integer>> smallest = new AtomicReference<>(snapshot.iterator().next());
-
-        if (smallest.get() == null) {
-            return null;
-        }
-
-        snapshot.iterator().forEachRemaining(x -> {
-            if (x.getValue() < smallest.get().getValue()) {
-                smallest.set(x);
-            }
-        });
-
-        int[] ret = new int[smallest.get().getKey().length()];
-
-        for (int x = 0; x < smallest.get().getKey().length(); x++) {
-            ret[x] = smallest.get().getKey().charAt(x) - '0';
-        }
-
-        return ret;
     }
 
     private static String traceToString(int[] decisionTrace) {

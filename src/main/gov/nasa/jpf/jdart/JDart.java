@@ -138,11 +138,6 @@ public class JDart implements JPFShell {
 
 
   public ConcolicExplorer run() {
-
-
-      Thread updateThread = new Thread(new Snapshot());
-      updateThread.start();
-
       while (true) {
           logger.finest("JDart.run() -- begin");
 

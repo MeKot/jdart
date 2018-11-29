@@ -2,5 +2,7 @@
 @include=../../config/jdart.jpf
 
 target=features.shift.Input
-concolic.method.shift=features.shift.Input.shiftTest(l:long,i:int)
+concolic.method.shift=features.shift.Input.shiftTest(l:int,i:int)
 concolic.method=shift
+
+jdart.configs.all_fields_symbolic.decision_trace=01
