@@ -142,7 +142,6 @@ public class JDart implements JPFShell {
       return null;
     }
     config.setTarget(methodInfo.getClassName());
-    config.setTargetEntry(methodInfo.getMethodName());
     config.setProperty("concolic.method", methodInfo.getMethodName());
     StringBuilder params = new StringBuilder();
     for (MethodInfo.ParamInfo arg : methodInfo.getParams()) {
