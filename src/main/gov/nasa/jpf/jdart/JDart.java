@@ -67,9 +67,10 @@ public class JDart implements JPFShell {
     //this(conf, true);
     // due to some bug the log manager has to be initialized first.
     LogManager.init(conf);
+    logger = JPF.getLogger("jdart");
+    logger.finest("\n Started Jdart with empty config \n");
     this.config = conf;
     this.cc = new ConcolicConfig(conf);
-    logger = JPF.getLogger("jdart");
   }
 
   /**
@@ -138,8 +139,18 @@ public class JDart implements JPFShell {
 
 
   public ConcolicExplorer run() {
-      while (true) {
-          logger.finest("JDart.run() -- begin");
+    logger.finest("JDart.run() -- begin");
+    MethodInfo methodInfo;
+    try {
+      methodInfo = MethodInfo.fromJsonFile("");
+    } catch (IOException e) {
+      logger.finest("Could not parse the JSON to get MethodInfo, failing and breaking");
+      e.printStackTrace();
+      return null;
+    }
+    config.setTarget(methodInfo.getClassName());
+    config.setTargetEntry(methodInfo.getMethodName());
+    while (true) {
 
       // prepare config
       Config jpfConf = cc.generateJPFConfig(config);
