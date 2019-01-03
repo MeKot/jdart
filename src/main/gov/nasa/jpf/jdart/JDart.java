@@ -135,7 +135,7 @@ public class JDart implements JPFShell {
     logger.finest("JDart.run() -- begin");
     MethodInfo methodInfo;
     try {
-      methodInfo = MethodInfo.fromJsonFile("");
+      methodInfo = MethodInfo.fromJsonFile("test.json");
     } catch (IOException e) {
       logger.finest("Could not parse the JSON to get MethodInfo, failing and breaking");
       e.printStackTrace();
@@ -143,6 +143,14 @@ public class JDart implements JPFShell {
     }
     config.setTarget(methodInfo.getClassName());
     config.setTargetEntry(methodInfo.getMethodName());
+    config.setProperty("concolic.method", methodInfo.getMethodName());
+    StringBuilder params = new StringBuilder();
+    for (MethodInfo.ParamInfo arg : methodInfo.getParams()) {
+      params.append(arg.getName()).append(":").append(arg.getType());
+    }
+    config.setProperty("concolic.method." + methodInfo.getMethodName(),
+            methodInfo.getClassName() + "." + methodInfo.getMethodName() + "(" + params.toString() + ")");
+    config.setProperty("concolic.method." + methodInfo.getMethodName() + ".config" , methodInfo.getMethodName());
     while (true) {
 
       // prepare config
