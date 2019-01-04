@@ -79,7 +79,28 @@ public class MethodInfo {
 
 
     public enum PrimitiveType {
-        INT, DOUBLE, STRING, CHAR, FLOAT, LONG, BYTE, SHORT, BOOLEAN,
+
+        INT("int"),
+        DOUBLE("double"),
+        STRING("String"),
+        CHAR("char"),
+        FLOAT("float"),
+        LONG("long"),
+        BYTE("byte"),
+        SHORT("short"),
+        BOOLEAN("boolean"),
+        VOID("void");
+
+        private final String keyword;
+
+        PrimitiveType(String keyword) {
+            this.keyword = keyword;
+        }
+
+        @Override
+        public String toString() {
+            return keyword;
+        }
     }
 
 }
