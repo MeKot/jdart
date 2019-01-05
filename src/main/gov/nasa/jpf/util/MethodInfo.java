@@ -107,12 +107,12 @@ public class MethodInfo {
 
         @Override
         public String toString() {
-            return keyword;
+            return this.keyword;
         }
 
         static {
             Map<String, PrimitiveType> map =
-                    Stream.of(PrimitiveType.values()).collect(Collectors.toMap(PrimitiveType::name, identity()));
+                    Stream.of(PrimitiveType.values()).collect(Collectors.toMap(PrimitiveType::toString, identity()));
             ENUM_MAP = Collections.unmodifiableMap(map);
         }
 
