@@ -25,11 +25,10 @@ import gov.nasa.jpf.jdart.constraints.Path;
 import gov.nasa.jpf.jdart.testsuites.TestSuiteGenerator;
 import gov.nasa.jpf.util.*;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -43,8 +42,8 @@ public class JDart implements JPFShell {
 
   public static final String CONFIG_KEY_CONCOLIC_EXPLORER = "jdart.concolic_explorer_instance";
 
-  private final Config config;
-  private final ConcolicConfig cc;
+  private Config config;
+  private ConcolicConfig cc;
 
   private JPFLogger logger = null; //JPF.getLogger("jdart")
 
@@ -124,6 +123,43 @@ public class JDart implements JPFShell {
     run();
   }
 
+  private void reloadNewConfigFromJson() {
+    MethodInfo methodInfo;
+    String newConfigPath = config.getProperty("def.conf.path");
+    final java.nio.file.Path pathToDefConfig = Paths.get(newConfigPath);
+    try {
+      methodInfo = MethodInfo.fromJsonFile("test.json");
+    } catch (IOException e) {
+      logger.finest("Could not parse the JSON to get MethodInfo, failing and breaking");
+      e.printStackTrace();
+      return;
+    }
+    StringBuilder appendedConf = new StringBuilder("\n");
+    appendedConf.append("target=").append(methodInfo.getClassName()).append("\n");
+    appendedConf.append("concolic.method=").append(methodInfo.getMethodName()).append("\n");
+    StringBuilder params = new StringBuilder();
+    for (MethodInfo.ParamInfo arg : methodInfo.getParams()) {
+      params.append(arg.getName()).append(":").append(arg.getType());
+    }
+    appendedConf.append("concolic.method.").append(methodInfo.getMethodName()).append("=")
+            .append(methodInfo.getClassName()).append(".").append(methodInfo.getMethodName())
+            .append("(").append(params.toString()).append(")").append("\n");
+//    config.setProperty("concolic.method." + methodInfo.getMethodName(),
+//            methodInfo.getClassName() + "." + methodInfo.getMethodName() + "(" + params.toString() + ")");
+//    appendedConf.append("concolic.method.").append(methodInfo.getMethodName())
+//            .append(".config=").append(methodInfo.getMethodName());
+//    config.setProperty("concolic.method." + methodInfo.getMethodName() + ".config" , methodInfo.getMethodName());
+    try {
+      Files.write(pathToDefConfig, appendedConf.toString().getBytes(), StandardOpenOption.APPEND);
+    } catch (IOException e) {
+      logger.finest("Exception when writing to default config, no changes, dry run");
+      e.printStackTrace();
+    }
+    Config newConf = new Config(newConfigPath);
+    config = newConf;
+    cc = new ConcolicConfig(newConf);
+  }
+
   /**
    * Run the concolic execution.
    *
@@ -133,24 +169,8 @@ public class JDart implements JPFShell {
 
   public ConcolicExplorer run() {
     logger.finest("JDart.run() -- begin");
-    MethodInfo methodInfo;
-    try {
-      methodInfo = MethodInfo.fromJsonFile("test.json");
-    } catch (IOException e) {
-      logger.finest("Could not parse the JSON to get MethodInfo, failing and breaking");
-      e.printStackTrace();
-      return null;
-    }
-    config.setTarget(methodInfo.getClassName());
-    config.setProperty("concolic.method", methodInfo.getMethodName());
-    StringBuilder params = new StringBuilder();
-    for (MethodInfo.ParamInfo arg : methodInfo.getParams()) {
-      params.append(arg.getName()).append(":").append(arg.getType());
-    }
-    config.setProperty("concolic.method." + methodInfo.getMethodName(),
-            methodInfo.getClassName() + "." + methodInfo.getMethodName() + "(" + params.toString() + ")");
-    config.setProperty("concolic.method." + methodInfo.getMethodName() + ".config" , methodInfo.getMethodName());
-    while (true) {
+//    reloadNewConfigFromJson();
+//    while (true) {
 
       // prepare config
       Config jpfConf = cc.generateJPFConfig(config);
@@ -338,8 +358,8 @@ public class JDart implements JPFShell {
       if (ce == null) {
         return ce;
       }
-    }
-
+//    }
+      return null;
   }
 
   public static ConcolicExplorer getConcolicExplorer(Config config) {
