@@ -8,6 +8,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.function.UnaryOperator.identity;
 
 public class MethodInfo {
     private final String className;
@@ -52,10 +58,10 @@ public class MethodInfo {
         for (int i = 0; i < params.length(); i++) {
             JSONObject obj = params.getJSONObject(i);
             String name = obj.getString("name");
-            PrimitiveType type = PrimitiveType.valueOf(obj.getString("type").toUpperCase());
+            PrimitiveType type = PrimitiveType.getPrimitiveTypeFromString(obj.getString("type"));
             methodParams[i] = new ParamInfo(name, type);
         }
-        PrimitiveType returnType = PrimitiveType.valueOf(jObj.getString("returnType").toUpperCase());
+        PrimitiveType returnType = PrimitiveType.getPrimitiveTypeFromString(jObj.getString("returnType"));
         return new MethodInfo(className, methodName, methodParams, returnType);
     }
 
@@ -81,6 +87,7 @@ public class MethodInfo {
     public enum PrimitiveType {
 
         INT("int"),
+        INT_ARR("int[]"),
         DOUBLE("double"),
         STRING("String"),
         CHAR("char"),
@@ -91,6 +98,7 @@ public class MethodInfo {
         BOOLEAN("boolean"),
         VOID("void");
 
+        private static final Map<String, PrimitiveType> ENUM_MAP;
         private final String keyword;
 
         PrimitiveType(String keyword) {
@@ -100,6 +108,16 @@ public class MethodInfo {
         @Override
         public String toString() {
             return keyword;
+        }
+
+        static {
+            Map<String, PrimitiveType> map =
+                    Stream.of(PrimitiveType.values()).collect(Collectors.toMap(PrimitiveType::name, identity()));
+            ENUM_MAP = Collections.unmodifiableMap(map);
+        }
+
+        public static PrimitiveType getPrimitiveTypeFromString(String s) {
+            return ENUM_MAP.get(s);
         }
     }
 
