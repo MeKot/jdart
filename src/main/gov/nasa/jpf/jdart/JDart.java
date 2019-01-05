@@ -26,9 +26,6 @@ import gov.nasa.jpf.jdart.testsuites.TestSuiteGenerator;
 import gov.nasa.jpf.util.*;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -154,7 +151,7 @@ public class JDart implements JPFShell {
   public ConcolicExplorer run() {
     logger.finest("JDart.run() -- begin");
     reloadNewConfigFromJson();
-//    while (true) {
+    while (true) {
 
       // prepare config
       Config jpfConf = cc.generateJPFConfig(config);
@@ -342,8 +339,7 @@ public class JDart implements JPFShell {
       if (ce == null) {
         return ce;
       }
-//    }
-      return null;
+    }
   }
 
   public static ConcolicExplorer getConcolicExplorer(Config config) {
