@@ -135,29 +135,31 @@ public class JDart implements JPFShell {
       return;
     }
     StringBuilder appendedConf = new StringBuilder("\n");
-    appendedConf.append("target=").append(methodInfo.getClassName()).append("\n");
-    appendedConf.append("concolic.method=").append(methodInfo.getMethodName()).append("\n");
+//    appendedConf.append("target=").append(methodInfo.getClassName()).append("\n");
+    config.setTarget(methodInfo.getClassName());
+//    appendedConf.append("concolic.method=").append(methodInfo.getMethodName()).append("\n");
+    config.setProperty("concolic.method=", methodInfo.getMethodName());
     StringBuilder params = new StringBuilder();
     for (MethodInfo.ParamInfo arg : methodInfo.getParams()) {
       params.append(arg.getName()).append(":").append(arg.getType());
     }
-    appendedConf.append("concolic.method.").append(methodInfo.getMethodName()).append("=")
-            .append(methodInfo.getClassName()).append(".").append(methodInfo.getMethodName())
-            .append("(").append(params.toString()).append(")").append("\n");
-//    config.setProperty("concolic.method." + methodInfo.getMethodName(),
-//            methodInfo.getClassName() + "." + methodInfo.getMethodName() + "(" + params.toString() + ")");
+//    appendedConf.append("concolic.method.").append(methodInfo.getMethodName()).append("=")
+//            .append(methodInfo.getClassName()).append(".").append(methodInfo.getMethodName())
+//            .append("(").append(params.toString()).append(")").append("\n");
+    config.setProperty("concolic.method." + methodInfo.getMethodName(),
+            methodInfo.getClassName() + "." + methodInfo.getMethodName() + "(" + params.toString() + ")");
 //    appendedConf.append("concolic.method.").append(methodInfo.getMethodName())
 //            .append(".config=").append(methodInfo.getMethodName());
-//    config.setProperty("concolic.method." + methodInfo.getMethodName() + ".config" , methodInfo.getMethodName());
+    config.setProperty("concolic.method." + methodInfo.getMethodName() + ".config" , methodInfo.getMethodName());
     try {
       Files.write(pathToDefConfig, appendedConf.toString().getBytes(), StandardOpenOption.APPEND);
     } catch (IOException e) {
       logger.finest("Exception when writing to default config, no changes, dry run");
       e.printStackTrace();
     }
-    Config newConf = new Config(newConfigPath);
-    config = newConf;
-    cc = new ConcolicConfig(newConf);
+//    Config newConf = new Config(newConfigPath);
+//    config = newConf;
+    cc = new ConcolicConfig(config);
   }
 
   /**
@@ -169,7 +171,7 @@ public class JDart implements JPFShell {
 
   public ConcolicExplorer run() {
     logger.finest("JDart.run() -- begin");
-//    reloadNewConfigFromJson();
+    reloadNewConfigFromJson();
 //    while (true) {
 
       // prepare config
