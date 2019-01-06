@@ -502,14 +502,10 @@ public class InternalConstraintsTree {
                     logger.fine("target  trace: ", Arrays.toString(decisionTrace));
                     logger.fine("current trace: ", Arrays.toString(currentTrace));
                 }
-                //FIXME what should we do if the target trace is a prefix of the current trace?
                 int size = Math.min(decisionTrace.length, currentTrace.length);
                 boolean isPrefix = true;
-                for (int i = 0; i < size; i++) {
-                    if (decisionTrace[i] != currentTrace[i]) {
-                        isPrefix = false;
-                        break;
-                    }
+                for (int i = 0; i < size && isPrefix; i++) {
+                  isPrefix = decisionTrace[i] == currentTrace[i];
                 }
                 if (!isPrefix) {
                     logger.fine("skipping node: ", currentTarget);
