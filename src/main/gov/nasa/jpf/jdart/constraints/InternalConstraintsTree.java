@@ -312,7 +312,22 @@ public class InternalConstraintsTree {
 
     private Object[] valuationToObjectArray(Valuation valuation) {
         List<Object> values = new ArrayList<>();
-        valuation.iterator().forEachRemaining(x -> values.add(x.getValue()));
+        values.add(0);
+        values.add(0);
+        values.add(0);
+        valuation.iterator().forEachRemaining(x -> {
+            switch (x.getVariable().getName()) {
+                case "n":
+                    values.set(0, x.getValue());
+                    break;
+                case "m":
+                    values.set(1, x.getValue());
+                    break;
+                case "x":
+                    values.set(2, x.getValue());
+                    break;
+            }
+        });
         return values.toArray();
     }
 
@@ -537,6 +552,7 @@ public class InternalConstraintsTree {
                 switch (res) {
                     case UNSAT:
                         currentTarget.unsatisfiable();
+                        System.out.println("Unsatisfiable");
                         break;
                     case DONT_KNOW:
                         currentTarget.dontKnow();
@@ -557,6 +573,9 @@ public class InternalConstraintsTree {
                             currentTarget.dontKnow();
                             break;
                         }
+
+                        val.getVariables().forEach(x-> System.out.println(x.toString()));
+                        System.out.println(Arrays.deepToString(valuationToObjectArray(val)));
                         seedBag.add(valuationToObjectArray(val));
                         nextPaths.remove(traceToString(decisionTrace));
 
