@@ -150,7 +150,7 @@ public class JDart implements JPFShell {
 
   public ConcolicExplorer run() {
     logger.finest("JDart.run() -- begin");
-    reloadNewConfigFromJson();
+    //reloadNewConfigFromJson();
     while (true) {
 
       // prepare config
